@@ -1,0 +1,28 @@
+[package]
+name = "py_watchdog"
+version = "0.1.0"
+edition = "2021"
+authors = ["Robin Quintero <rohaquinlop301@gmail.com>"]
+license = "MIT"
+description = "A Python SCA tool that acts as a watchdog, keeping an eye out for security vulnerabilities and reporting them promptly."
+readme = "README.md"
+homepage = "https://github.com/rohaquinlop/PyWatchdog"
+repository = "https://github.com/rohaquinlop/PyWatchdog"
+exclude = ["/tests", ".github", ".gitignore", "target"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "py_watchdog"
+crate-type = ["cdylib"]
+
+[dependencies]
+chrono = "0.4.38"
+ignore = "0.4.22"
+indicatif = "0.17.8"
+pyo3 = "0.20.0"
+rayon = "1.10.0"
+semver = "1.0.23"
+serde_json = "1.0.117"
+tempfile = "3.10.1"
+toml = "0.8.14"
+ureq = "2.9.7"

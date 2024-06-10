@@ -1,0 +1,21 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "PyWatchdog"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+dynamic = ["version"]
+
+dependencies = ["typer"]
+
+[project.scripts]
+py_watchdog = "py_watchdog.main:app"
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
