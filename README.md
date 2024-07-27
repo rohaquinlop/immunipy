@@ -33,7 +33,7 @@
 You can install PyWatchdog using pip:
 
 ```bash
-pip install py_watchdog
+pip install sca_watchdog
 ```
 
 ## Usage

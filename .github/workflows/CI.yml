@@ -137,7 +137,4 @@ jobs:
           pattern: wheels-*
           merge-multiple: true
       - name: Publish to PyPI
-        uses: PyO3/maturin-action@v1
-        with:
-          command: upload
-          args: --non-interactive --skip-existing dist/*
+        uses: pypa/gh-action-pypi-publish@release/v1
