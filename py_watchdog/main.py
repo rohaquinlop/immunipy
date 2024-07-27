@@ -8,7 +8,7 @@ import re
 import time
 
 app = typer.Typer(name="py_watchdog")
-CONSOLE = Console()
+CONSOLE = Console(soft_wrap=True)
 VERSION = "0.0.1"
 _URL_PATTERN = r"^(https:\/\/|http:\/\/|www\.|git@)(github|gitlab)\.com(\/[\w.-]+){2,}$"
 
@@ -17,6 +17,12 @@ _URL_PATTERN = r"^(https:\/\/|http:\/\/|www\.|git@)(github|gitlab)\.com(\/[\w.-]
 def main(
     path: str = typer.Argument(
         help="Path to the file or directory to check vulnerabilities"
+    ),
+    dont_fail: bool = typer.Option(
+        False,
+        "--dont-fail",
+        "-d",
+        help="Don't fail if vulnerable packages are found",
     ),
 ) -> None:
     is_dir = Path(path).is_dir()
@@ -32,14 +38,20 @@ def main(
 
     if vuln_pkgs:
         CONSOLE.print(
-            f"Found {len(vuln_pkgs)} vulnerable packages in {execution_time:.4f}s"
+            f"Found {len(vuln_pkgs)} vulnerable package{'s' if len(vuln_pkgs) > 1 else ''} in {execution_time:.4f}s"
         )
+
         for pkg in vuln_pkgs:
+            CONSOLE.rule(style="red")
             CONSOLE.print(
-                f"[bold red]Vulnerable package:[/bold red] {pkg.pkg_name} [bold red]Version:[/bold red] {pkg.vuln_version} [bold green]Fixed:[/bold green] {pkg.fixed_version}"
+                f"[bold red]Package:[/bold red] {pkg.pkg_name} [bold red]Version:[/bold red] {pkg.vuln_version}\n"
+                + f"[bold green]Fixed version:[/bold green] {pkg.fixed_version}\n"
+                + f"[red]Vuln ID:[/red] {pkg.vuln_id} [red]Aliases[/red]: {pkg.vuln_aliases}\n"
+                + f"Location: {pkg.path}"
             )
 
-        raise typer.Exit(code=1)
+        if not dont_fail:
+            raise typer.Exit(code=1)
 
     CONSOLE.print(f"No vulnerable packages found in {execution_time:.4f}s")
 

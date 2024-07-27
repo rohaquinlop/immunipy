@@ -5,6 +5,7 @@ use {
     indicatif::{ProgressBar, ProgressStyle},
     pyo3::prelude::*,
     rayon::prelude::*,
+    regex::Regex,
     semver::Version,
     serde_json::json,
     std::{
@@ -75,14 +76,19 @@ pub fn main(path: &str, is_dir: bool, is_url: bool) -> PyResult<Vec<VulnerablePa
     } else {
         let parent_dir = path::Path::new(path).parent().unwrap().to_str().unwrap();
 
-        vuln_pkgs = vulnerable_pkgs(path, parent_dir);
+        if path.ends_with("requirements.txt") {
+            vuln_pkgs = vulnerable_req_pkgs(path, parent_dir);
+        } else {
+            vuln_pkgs = vulnerable_lock_pkgs(path, parent_dir);
+        }
     }
 
     Ok(vuln_pkgs)
 }
 
 fn evaluate_dir(path: &str) -> Vec<VulnerablePackage> {
-    let mut pkgs_paths: Vec<String> = Vec::new();
+    let mut pkgs_lock_paths: Vec<String> = Vec::new();
+    let mut pkgs_req_paths: Vec<String> = Vec::new();
 
     let parent_dir = path::Path::new(path).parent().unwrap().to_str().unwrap();
 
@@ -90,14 +96,16 @@ fn evaluate_dir(path: &str) -> Vec<VulnerablePackage> {
         let entry = entry.unwrap();
         let file_path_str = entry.path().to_str().unwrap();
 
-        if entry.path().is_file()
-            && (file_path_str.ends_with("Cargo.lock") || file_path_str.ends_with("poetry.lock"))
-        {
-            pkgs_paths.push(file_path_str.to_string());
+        if entry.path().is_file() && file_path_str.ends_with("poetry.lock") {
+            pkgs_lock_paths.push(file_path_str.to_string());
+        }
+
+        if entry.path().is_file() && file_path_str.ends_with("requirements.txt") {
+            pkgs_req_paths.push(file_path_str.to_string());
         }
     }
 
-    let pb = ProgressBar::new(pkgs_paths.len() as u64);
+    let pb = ProgressBar::new((pkgs_lock_paths.len() as u64) + (pkgs_req_paths.len() as u64));
     pb.set_style(
         indicatif::ProgressStyle::default_bar()
             .template(
@@ -107,25 +115,37 @@ fn evaluate_dir(path: &str) -> Vec<VulnerablePackage> {
             .progress_chars("##-"),
     );
 
-    let vuln_pkgs: Vec<Vec<VulnerablePackage>> = pkgs_paths
+    let vuln_lock_pkgs: Vec<Vec<VulnerablePackage>> = pkgs_lock_paths
         .par_iter()
         .map(|pkg_path| {
             pb.inc(1);
-            vulnerable_pkgs(&pkg_path, parent_dir)
+            vulnerable_lock_pkgs(&pkg_path, parent_dir)
+        })
+        .collect();
+
+    let vuln_req_pkgs: Vec<Vec<VulnerablePackage>> = pkgs_req_paths
+        .par_iter()
+        .map(|pkg_path| {
+            pb.inc(1);
+            vulnerable_req_pkgs(&pkg_path, parent_dir)
         })
         .collect();
 
     pb.finish_with_message("Done!");
 
-    vuln_pkgs.into_iter().flatten().collect()
+    vuln_lock_pkgs
+        .into_iter()
+        .flatten()
+        .chain(vuln_req_pkgs.into_iter().flatten())
+        .collect()
 }
 
-fn vulnerable_pkgs(path: &str, parent_dir: &str) -> Vec<VulnerablePackage> {
-    let lock_content = fs::read_to_string(path).unwrap();
-    let toml_content = lock_content.parse::<toml::Table>().unwrap();
-    let packages = toml_content.get("package").unwrap().as_array().unwrap();
+fn vulnerable_pkgs(
+    pkgs_info: Vec<(String, String)>,
+    path: &str,
+    parent_dir: &str,
+) -> Vec<VulnerablePackage> {
     let empty_json = json!({});
-
     let file_path = path::Path::new(path);
     let file_name = file_path.file_name().unwrap().to_str().unwrap();
     let absolute_path = file_path
@@ -134,12 +154,9 @@ fn vulnerable_pkgs(path: &str, parent_dir: &str) -> Vec<VulnerablePackage> {
         .to_str()
         .unwrap();
 
-    let vuln_pkgs: Vec<VulnerablePackage> = packages
+    let vuln_pkgs: Vec<VulnerablePackage> = pkgs_info
         .par_iter()
-        .map(|pkg| {
-            let pkg_name = pkg.get("name").unwrap().as_str().unwrap();
-            let pkg_version = pkg.get("version").unwrap().as_str().unwrap();
-
+        .map(|(pkg_name, pkg_version)| {
             let json_str = format!(
                 r#"{{"version": "{}", "package": {{ "name": "{}", "ecosystem": "PyPI", }} }}"#,
                 pkg_version, pkg_name
@@ -180,6 +197,8 @@ fn vulnerable_pkgs(path: &str, parent_dir: &str) -> Vec<VulnerablePackage> {
             let most_recent_vuln = vulns.last().unwrap();
             // From the most recent vuln, get the following information
             // - vuln_summary
+            // - vuln_id
+            // - vuln_aliases
             // - fixed_version, if exists
             // - cwe_ids
             // - published_date
@@ -189,6 +208,18 @@ fn vulnerable_pkgs(path: &str, parent_dir: &str) -> Vec<VulnerablePackage> {
                 summary.as_str().unwrap().to_string()
             } else {
                 String::from("No summary available")
+            };
+
+            let vuln_id = most_recent_vuln.get("id").unwrap().as_str().unwrap();
+            let vuln_aliases = if let Some(aliases) = most_recent_vuln.get("aliases") {
+                aliases
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|alias| alias.as_str().unwrap().to_string())
+                    .collect()
+            } else {
+                Vec::new()
             };
 
             let fixed_version = if let Some(affected) = most_recent_vuln.get("affected") {
@@ -272,6 +303,8 @@ fn vulnerable_pkgs(path: &str, parent_dir: &str) -> Vec<VulnerablePackage> {
                 pkg_name: pkg_name.to_string(),
                 vuln_summary,
                 vuln_version: pkg_version.to_string(),
+                vuln_id: vuln_id.to_string(),
+                vuln_aliases,
                 fixed_version,
                 cwe_ids,
                 published_date: published_date.to_string(),
@@ -281,4 +314,41 @@ fn vulnerable_pkgs(path: &str, parent_dir: &str) -> Vec<VulnerablePackage> {
         .collect();
 
     vuln_pkgs
+}
+
+fn vulnerable_lock_pkgs(path: &str, parent_dir: &str) -> Vec<VulnerablePackage> {
+    let lock_content = fs::read_to_string(path).unwrap();
+    let toml_content = lock_content.parse::<toml::Table>().unwrap();
+    let packages = toml_content.get("package").unwrap().as_array().unwrap();
+
+    let pkgs_info = packages
+        .into_iter()
+        .map(|pkg| {
+            let pkg_name = pkg.get("name").unwrap().as_str().unwrap();
+            let pkg_version = pkg.get("version").unwrap().as_str().unwrap();
+
+            (pkg_name.to_string(), pkg_version.to_string())
+        })
+        .collect();
+
+    vulnerable_pkgs(pkgs_info, path, parent_dir)
+}
+
+fn vulnerable_req_pkgs(path: &str, parent_dir: &str) -> Vec<VulnerablePackage> {
+    let req_content = fs::read_to_string(path).unwrap();
+    let re = Regex::new(r"^[a-zA-Z]+.*==.*$").unwrap();
+
+    let pkgs_info = req_content
+        .lines()
+        .filter(|line| re.is_match(line))
+        .map(|line| {
+            let pkg_info: Vec<&str> = line.split("==").collect();
+            let pkg_name = pkg_info[0];
+            let pkg_version = pkg_info[1];
+
+            (pkg_name.to_string(), pkg_version.to_string())
+        })
+        .collect();
+
+    vulnerable_pkgs(pkgs_info, path, parent_dir)
 }

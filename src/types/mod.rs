@@ -8,6 +8,8 @@ pub struct VulnerablePackage {
     pub pkg_name: String,
     pub vuln_summary: String,
     pub vuln_version: String,
+    pub vuln_id: String,
+    pub vuln_aliases: Vec<String>,
     pub fixed_version: String,
     pub cwe_ids: Vec<String>,
     pub published_date: String,
