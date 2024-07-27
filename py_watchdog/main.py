@@ -38,7 +38,7 @@ def main(
 
     if vuln_pkgs:
         CONSOLE.print(
-            f"Found {len(vuln_pkgs)} vulnerable package{'s' if len(vuln_pkgs) > 1 else ''} in {execution_time:.4f}s"
+            f"\nFound {len(vuln_pkgs)} vulnerable package{'s' if len(vuln_pkgs) > 1 else ''} in {execution_time:.4f}s"
         )
 
         for pkg in vuln_pkgs:
