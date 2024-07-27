@@ -41,17 +41,25 @@ pip install py_watchdog
 
 To check for security vulnerabilities in your Python dependencies, run:
 
+**requirements.txt**
+
 ```bash
 py_watchdog /path/to/requirements.txt
 ```
+
+**poetry.lock**
 
 ```bash
 py_watchdog /path/to/poetry.lock
 ```
 
+**Project directory**
+
 ```bash
 py_watchdog /path/to/your/project/directory
 ```
+
+**Git project URL**
 
 ```bash
 py_watchdog https://your-git-project
