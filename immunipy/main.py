@@ -1,13 +1,13 @@
-from py_watchdog import py_watchdog
-from py_watchdog.py_watchdog import VulnerablePackage
+from immunipy import immunipy
+from immunipy.immunipy import VulnerablePackage
 import typer
 from rich.console import Console
-import os
 from pathlib import Path
 import re
 import time
+from typing import List
 
-app = typer.Typer(name="py_watchdog")
+app = typer.Typer(name="immunipy")
 CONSOLE = Console(soft_wrap=True)
 VERSION = "0.0.1"
 _URL_PATTERN = r"^(https:\/\/|http:\/\/|www\.|git@)(github|gitlab)\.com(\/[\w.-]+){2,}$"
@@ -26,14 +26,13 @@ def main(
     ),
 ) -> None:
     is_dir = Path(path).is_dir()
-    _invocation_path = os.getcwd()
     is_url = bool(re.match(_URL_PATTERN, path))
 
-    CONSOLE.rule(f":dog: PyWatchdog v{VERSION}")
+    CONSOLE.rule(f":dog: immunipy v{VERSION}")
     CONSOLE.print(f"Checking {path} for vulnerable packages...")
 
     start_time = time.time()
-    vuln_pkgs: list[VulnerablePackage] = py_watchdog.main(path, is_dir, is_url)
+    vuln_pkgs: List[VulnerablePackage] = immunipy.main(path, is_dir, is_url)
     execution_time = time.time() - start_time
 
     if vuln_pkgs:

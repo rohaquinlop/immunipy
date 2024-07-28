@@ -3,8 +3,8 @@ requires = ["maturin>=1.5,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "PyWatchdog"
-requires-python = ">=3.8"
+name = "immunipy"
+requires-python = ">=3.7"
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
@@ -15,7 +15,7 @@ dynamic = ["version"]
 dependencies = ["typer"]
 
 [project.scripts]
-py_watchdog = "py_watchdog.main:app"
+immunipy = "immunipy.main:app"
 
 [tool.maturin]
 features = ["pyo3/extension-module"]

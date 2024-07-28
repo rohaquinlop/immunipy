@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 
 #[derive(Clone)]
-#[pyclass(module = "py_watchdog", get_all)]
+#[pyclass(module = "immunipy", get_all)]
 pub struct VulnerablePackage {
     pub path: String,
     pub file_name: String,

@@ -284,6 +284,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "immunipy"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "ignore",
+ "indicatif",
+ "pyo3",
+ "rayon",
+ "regex",
+ "semver",
+ "serde_json",
+ "tempfile",
+ "toml",
+ "ureq",
+]
+
+[[package]]
 name = "indexmap"
 version = "2.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -457,23 +474,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22244ce15aa966053a896d1accb3a6e68469b97c7f33f284b99f0d576879fc23"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "py_watchdog"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "ignore",
- "indicatif",
- "pyo3",
- "rayon",
- "regex",
- "semver",
- "serde_json",
- "tempfile",
- "toml",
- "ureq",
 ]
 
 [[package]]
